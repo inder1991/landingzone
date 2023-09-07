@@ -15,7 +15,7 @@ variable "existing_ddos_protection_plan_resource_id" {
 }
 
 variable "hub_sub_id" {
-  default = "0cfe2870-d256-4119-b0a3-16293ac11bdc"
+  default = "d5e707fe-59d0-4717-b6f3-fc64a467833d"
   validation {
     condition     = can(regex("^[a-z0-9-]{36}$", var.hub_sub_id)) || var.hub_sub_id == ""
     error_message = "Value must be a valid Subscription ID (GUID)."
@@ -23,7 +23,7 @@ variable "hub_sub_id" {
 
 }
 variable "management_sub_id" {
-  default = "0cfe2870-d256-4119-b0a3-16293ac11bdc"
+  default = "d5e707fe-59d0-4717-b6f3-fc64a467833d"
   validation {
     condition     = can(regex("^[a-z0-9-]{36}$", var.management_sub_id)) || var.management_sub_id == ""
     error_message = "Value must be a valid Subscription ID (GUID)."
@@ -31,7 +31,7 @@ variable "management_sub_id" {
 
 }
 variable "rsf_sub_id" {
-  default = "0cfe2870-d256-4119-b0a3-16293ac11bdc"
+  default = "d5e707fe-59d0-4717-b6f3-fc64a467833d"
   validation {
     condition     = can(regex("^[a-z0-9-]{36}$", var.rsf_sub_id)) || var.rsf_sub_id == ""
     error_message = "Value must be a valid Subscription ID (GUID)."
@@ -39,7 +39,7 @@ variable "rsf_sub_id" {
 
 }
 variable "identity_sub_id" {
-  default = "0cfe2870-d256-4119-b0a3-16293ac11bdc"
+  default = "d5e707fe-59d0-4717-b6f3-fc64a467833d"
   validation {
     condition     = can(regex("^[a-z0-9-]{36}$", var.identity_sub_id)) || var.identity_sub_id == ""
     error_message = "Value must be a valid Subscription ID (GUID)."
@@ -262,8 +262,130 @@ variable "configure_hub_networking_resources" {
             subnets                         = []
           }
         }
-
       ]
     }
   }
 }
+
+
+variable "configure_identity_networking_resources" {
+  type = object({
+    settings = optional(object({
+      identity_networks = optional(list(
+        object({
+          enabled = optional(bool, true)
+          config = object({
+            address_space                = list(string)
+            name                         = string
+            resource_group_name          = string
+            description                  = string
+            location                     = optional(string, "")
+            link_to_ddos_protection_plan = optional(bool, false)
+            dns_servers                  = optional(list(string), [])
+            bgp_community                = optional(string, "")
+            subnets = optional(list(
+              object({
+                name                      = string
+                address_prefixes          = list(string)
+                network_security_group_id = optional(string, "")
+                route_table_id            = optional(string, "")
+              })
+            ), [])
+          })
+        })
+      ))
+      })
+    )
+  })
+
+  default = {
+    settings = {
+      # Create two identity networks 
+      # and link to DDoS protection plan if created
+      identity_networks = [
+        { enabled = true
+          config = {
+            address_space                   = ["10.100.11.0/22", ]
+            location                        = "uksouth"
+            dns_servers                     = [""]
+            name                            = "identity-1"
+            description                     = "identity-1"
+            enable_identity_network_mesh_peering = true
+            resource_group_name             = "identity-rg"
+            link_to_ddos_protection_plan    = false
+            subnets = [
+              {
+                name             = "identity-subnet"
+                address_prefixes = ["10.100.11.0/24"]
+
+              }
+            ]
+          }
+        }
+      ]
+      
+    }
+  }
+}
+
+
+variable "configure_mgmt_networking_resources" {
+  type = object({
+    settings = optional(object({
+      mgmt_networks = optional(list(
+        object({
+          enabled = optional(bool, true)
+          config = object({
+            address_space                = list(string)
+            name                         = string
+            resource_group_name          = string
+            description                  = string
+            location                     = optional(string, "")
+            link_to_ddos_protection_plan = optional(bool, false)
+            dns_servers                  = optional(list(string), [])
+            bgp_community                = optional(string, "")
+            subnets = optional(list(
+              object({
+                name                      = string
+                address_prefixes          = list(string)
+                network_security_group_id = optional(string, "")
+                route_table_id            = optional(string, "")
+              })
+            ), [])
+          })
+        })
+      ))
+      })
+    )
+  })
+
+  default = {
+    settings = {
+      # Create two mgmt networks 
+      # and link to DDoS protection plan if created
+      mgmt_networks = [
+        { enabled = true
+          config = {
+            address_space                   = ["10.100.11.0/22", ]
+            location                        = "uksouth"
+            dns_servers                     = [""]
+            name                            = "mgmt-1"
+            description                     = "mgmt-1"
+            enable_mgmt_network_mesh_peering = true
+            resource_group_name             = "mgmt-rg"
+            link_to_ddos_protection_plan    = false
+            subnets = [
+              {
+                name             = "mgmt-subnet"
+                address_prefixes = ["10.100.11.0/24"]
+
+              }
+            ]
+          }
+        }
+      ]
+      
+    }
+  }
+}
+

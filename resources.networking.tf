@@ -1,7 +1,7 @@
 resource "azurerm_virtual_network" "connectivity" {
   for_each = local.azurerm_virtual_network
 
-  provider = azurerm.rsf
+  provider = azurerm.hub
 
   # Mandatory resource attributes
   name                = each.value.name
@@ -25,7 +25,7 @@ resource "azurerm_virtual_network" "connectivity" {
 resource "azurerm_subnet" "connectivity" {
   for_each = local.azurerm_subnet_connectivity
 
-  provider = azurerm.rsf
+  provider = azurerm.hub
 
   # Mandatory resource attributes
   name                 = each.value.name
@@ -157,9 +157,217 @@ resource "azurerm_virtual_network_gateway" "connectivity" {
   ]
 }
 
+## To create the identity vnet and subnet
+resource "azurerm_virtual_network" "identity" {
+  for_each = local.azurerm_virtual_network_identity
+
+  provider = azurerm.identity
+
+  # Mandatory resource attributes
+  name                = each.value.name
+  resource_group_name = each.value.resource_group_name
+  address_space       = each.value.address_space
+  location            = local.location
+  tags                = merge(local.vnet.tags, { "description" : each.value.description })
+
+  dynamic "ddos_protection_plan" {
+    for_each = each.value.ddos_protection_plan
+    content {
+      id     = ddos_protection_plan.value["id"]
+      enable = ddos_protection_plan.value["enable"]
+    }
+  }
+  depends_on = [
+    azurerm_resource_group.identity-rg
+  ]
+}
+
+resource "azurerm_subnet" "identity" {
+  for_each = local.azurerm_subnet_identity_connectivity
+
+  provider = azurerm.identity
+
+  # Mandatory resource attributes
+  name                 = each.value.name
+  resource_group_name  = each.value.resource_group_name
+  virtual_network_name = each.value.virtual_network_name
+  address_prefixes     = each.value.address_prefixes
+
+  # dependencies
+  depends_on = [
+    azurerm_resource_group.identity-rg,
+    azurerm_virtual_network.identity,
+  ]
+}
+
+## To create the mgmt vnet and subnet
+resource "azurerm_virtual_network" "mgmt" {
+  for_each = local.azurerm_virtual_network_mgmt
+
+  provider = azurerm.management
+
+  # Mandatory resource attributes
+  name                = each.value.name
+  resource_group_name = each.value.resource_group_name
+  address_space       = each.value.address_space
+  location            = local.location
+  tags                = merge(local.vnet.tags, { "description" : each.value.description })
+
+  dynamic "ddos_protection_plan" {
+    for_each = each.value.ddos_protection_plan
+    content {
+      id     = ddos_protection_plan.value["id"]
+      enable = ddos_protection_plan.value["enable"]
+    }
+  }
+  depends_on = [
+    azurerm_resource_group.management-rg
+  ]
+}
+
+resource "azurerm_subnet" "mgmt" {
+  for_each = local.azurerm_subnet_mgmt_connectivity
+
+  provider = azurerm.management
+
+  # Mandatory resource attributes
+  name                 = each.value.name
+  resource_group_name  = each.value.resource_group_name
+  virtual_network_name = each.value.virtual_network_name
+  address_prefixes     = each.value.address_prefixes
+
+  # dependencies
+  depends_on = [
+    azurerm_resource_group.management-rg,
+    azurerm_virtual_network.mgmt,
+  ]
+}
 
 
+## Vnet peering for management groups
+resource "azurerm_virtual_network_peering" "peer_hub_to_identity" {
+  for_each = local.azurerm_virtual_network
 
+  provider = azurerm.hub
 
+  name                         = "peer-hub-to-identity"
+  resource_group_name          = each.value.resource_group_name
+  virtual_network_name         = each.value.name
+  #remote_virtual_network_id    = azurerm_subnet.identity["identity-subnet"].id
+  remote_virtual_network_id    = azurerm_virtual_network.identity["identity-1"].id
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = true
 
+  # dependencies
+  depends_on = [
+    azurerm_resource_group.hub-rg,
+    azurerm_virtual_network.connectivity,
+    azurerm_virtual_network.identity,
+  ]
+}
 
+resource "azurerm_virtual_network_peering" "peer_hub_to_mgmt" {
+  for_each = local.azurerm_virtual_network
+
+  provider = azurerm.hub
+  
+  name                         = "peer-hub-to-mgmt"
+  resource_group_name          = each.value.resource_group_name
+  virtual_network_name         = each.value.name
+  remote_virtual_network_id    = azurerm_virtual_network.mgmt["mgmt-1"].id
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = true
+
+  # dependencies
+  depends_on = [
+    azurerm_resource_group.hub-rg,
+    azurerm_virtual_network.connectivity,
+    azurerm_virtual_network.mgmt,
+  ]
+}
+
+resource "azurerm_virtual_network_peering" "peer_identity_to_hub" {
+  for_each = local.azurerm_virtual_network_identity
+
+  provider = azurerm.identity
+
+  name                         = "peer-identity-to-hub"
+  resource_group_name          = each.value.resource_group_name
+  virtual_network_name         = each.value.name
+  remote_virtual_network_id    = azurerm_virtual_network.connectivity["hub-1"].id
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = true
+
+# dependencies
+  depends_on = [
+    azurerm_resource_group.identity-rg,
+    azurerm_virtual_network.connectivity,
+    azurerm_virtual_network.identity,
+  ]
+}
+
+resource "azurerm_virtual_network_peering" "peer_mgmt_to_hub" {
+  for_each = local.azurerm_virtual_network_mgmt
+
+  provider = azurerm.management
+
+  name                         = "peer-mgmt-to-hub"
+  resource_group_name          = each.value.resource_group_name
+  virtual_network_name         = each.value.name
+  remote_virtual_network_id    = azurerm_virtual_network.connectivity["hub-1"].id
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = true
+
+# dependencies
+  depends_on = [
+    azurerm_resource_group.management-rg,
+    azurerm_virtual_network.connectivity,
+    azurerm_virtual_network.mgmt,
+  ]
+}
+
+resource "azurerm_virtual_network_peering" "peer_identity_to_hub2" {
+  for_each = local.azurerm_virtual_network_identity
+
+  provider = azurerm.identity
+
+  name                         = "peer-identity-to-hub2"
+  resource_group_name          = each.value.resource_group_name
+  virtual_network_name         = each.value.name
+  remote_virtual_network_id    = azurerm_virtual_network.connectivity["hub-2"].id
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = true
+
+# dependencies
+  depends_on = [
+    azurerm_resource_group.identity-rg,
+    azurerm_virtual_network.connectivity,
+    azurerm_virtual_network.identity,
+  ]
+}
+
+resource "azurerm_virtual_network_peering" "peer_mgmt_to_hub2" {
+  for_each = local.azurerm_virtual_network_mgmt
+
+  provider = azurerm.management
+
+  name                         = "peer-mgmt-to-hub2"
+  resource_group_name          = each.value.resource_group_name
+  virtual_network_name         = each.value.name
+  remote_virtual_network_id    = azurerm_virtual_network.connectivity["hub-2"].id
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = true
+
+# dependencies
+  depends_on = [
+    azurerm_resource_group.management-rg,
+    azurerm_virtual_network.connectivity,
+    azurerm_virtual_network.mgmt,
+  ]
+}

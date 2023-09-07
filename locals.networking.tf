@@ -237,3 +237,181 @@ locals {
 
 
 }
+
+## Local vars for Identity vnet and subnet.
+locals {
+  identity_networks = local.settings_identity.identity_networks
+  identity_networks_by_scope = {
+    for identity_network in local.identity_networks :
+    identity_network.config.name => identity_network
+  }
+  identity_network_locations = keys(local.identity_networks_by_scope)
+}
+
+# The following locals are used to check enable and disable flags 
+locals {
+  deploy_identity_network = {
+    for identity_name, identity_network in local.identity_networks_by_scope :
+    identity_name =>
+    identity_network.enabled
+  }
+}
+
+locals {
+  azurerm_subnet_identity = flatten([
+    for subnets in local.subnets_by_virtual_network_identity :
+    subnets
+  ])
+}
+
+# The following locals are used to build the map of Vnets
+# to deploy.
+
+locals {
+  azurerm_virtual_network_identity = {
+    for identity_name, identity_config in local.identity_networks_by_scope :
+    identity_name => {
+
+      # Resource definition attributes
+      name                = identity_name
+      resource_group_name = identity_config.config.resource_group_name
+      address_space       = identity_config.config.address_space
+      location            = local.location
+      description         = identity_config.config.description
+      dns_servers         = identity_config.config.dns_servers
+      tags                = local.vnet.tags
+      ddos_protection_plan = identity_config.config.link_to_ddos_protection_plan ? [
+        {
+          id     = local.ddos_protection_plan_resource_id
+          enable = true
+        }
+      ] : local.empty_list
+
+    }
+    if local.deploy_identity_network[identity_name]
+  }
+}
+
+
+
+# The following locals are used to build the map of Subnets
+# to deploy.
+locals {
+  azurerm_subnet_identity_connectivity = {
+    for resource in local.azurerm_subnet_identity :
+    resource.name => resource
+  }
+}
+
+locals {
+  subnets_by_virtual_network_identity = {
+    for identity_name, identity_config in local.identity_networks_by_scope :
+    identity_name => concat(
+      # Get customer specified subnets and add additional required attributes
+      [
+        for subnet in identity_config.config.subnets : merge(
+          subnet,
+          {
+            # Resource logic attributes
+            //    resource_id = "${local.virtual_network_resource_id[location]}/subnets/${subnet.name}"
+            location = local.location
+            # Resource definition attributes
+            resource_group_name         = identity_config.config.resource_group_name
+            virtual_network_name        = identity_name
+            service_endpoints           = try(local.custom_settings.azurerm_subnet_identity["connectivity"][subnet.name].service_endpoints, null)
+            service_endpoint_policy_ids = try(local.custom_settings.azurerm_subnet_identity["connectivity"][subnet.name].service_endpoint_policy_ids, null)
+          }
+        )
+      ]
+    )
+  }
+}
+
+## Local vars for mgmt vnet and subnet.
+locals {
+  mgmt_networks = local.settings_mgmt.mgmt_networks
+  mgmt_networks_by_scope = {
+    for mgmt_network in local.mgmt_networks :
+    mgmt_network.config.name => mgmt_network
+  }
+  mgmt_network_locations = keys(local.mgmt_networks_by_scope)
+}
+
+# The following locals are used to check enable and disable flags 
+locals {
+  deploy_mgmt_network = {
+    for mgmt_name, mgmt_network in local.mgmt_networks_by_scope :
+    mgmt_name =>
+    mgmt_network.enabled
+  }
+}
+
+locals {
+  azurerm_subnet_mgmt = flatten([
+    for subnets in local.subnets_by_virtual_network_mgmt :
+    subnets
+  ])
+}
+
+# The following locals are used to build the map of Vnets
+# to deploy.
+
+locals {
+  azurerm_virtual_network_mgmt = {
+    for mgmt_name, mgmt_config in local.mgmt_networks_by_scope :
+    mgmt_name => {
+
+      # Resource definition attributes
+      name                = mgmt_name
+      resource_group_name = mgmt_config.config.resource_group_name
+      address_space       = mgmt_config.config.address_space
+      location            = local.location
+      description         = mgmt_config.config.description
+      dns_servers         = mgmt_config.config.dns_servers
+      tags                = local.vnet.tags
+      ddos_protection_plan = mgmt_config.config.link_to_ddos_protection_plan ? [
+        {
+          id     = local.ddos_protection_plan_resource_id
+          enable = true
+        }
+      ] : local.empty_list
+
+    }
+    if local.deploy_mgmt_network[mgmt_name]
+  }
+}
+
+
+
+# The following locals are used to build the map of Subnets
+# to deploy.
+locals {
+  azurerm_subnet_mgmt_connectivity = {
+    for resource in local.azurerm_subnet_mgmt :
+    resource.name => resource
+  }
+}
+
+locals {
+  subnets_by_virtual_network_mgmt = {
+    for mgmt_name, mgmt_config in local.mgmt_networks_by_scope :
+    mgmt_name => concat(
+      # Get customer specified subnets and add additional required attributes
+      [
+        for subnet in mgmt_config.config.subnets : merge(
+          subnet,
+          {
+            # Resource logic attributes
+            //    resource_id = "${local.virtual_network_resource_id[location]}/subnets/${subnet.name}"
+            location = local.location
+            # Resource definition attributes
+            resource_group_name         = mgmt_config.config.resource_group_name
+            virtual_network_name        = mgmt_name
+            service_endpoints           = try(local.custom_settings.azurerm_subnet_mgmt["connectivity"][subnet.name].service_endpoints, null)
+            service_endpoint_policy_ids = try(local.custom_settings.azurerm_subnet_mgmt["connectivity"][subnet.name].service_endpoint_policy_ids, null)
+          }
+        )
+      ]
+    )
+  }
+}
