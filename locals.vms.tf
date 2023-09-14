@@ -59,9 +59,9 @@ locals {
         }
 
         source_image_reference = {
-            publisher = "Canonical"
-            offer     = "UbuntuServer"
-            sku       = "18.04-LTS"
+            publisher = vm_configs.config.source_image_reference[0].publisher
+            offer     = vm_configs.config.source_image_reference[0].offer
+            sku       = vm_configs.config.source_image_reference[0].sku
             version   = vm_configs.config.source_image_reference[0].version
         }
 
