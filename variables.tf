@@ -219,7 +219,7 @@ variable "configure_hub_networking_resources" {
               }
             ]
             virtual_network_gateway = {
-              enabled = true
+              enabled = false
               config = {
                 name            = "vpngw"
                 gateway_sku_vpn = "VpnGw3AZ"
@@ -249,7 +249,7 @@ variable "configure_hub_networking_resources" {
         }
         ,
         {
-          enabled = true
+          enabled = false
           config = {
             address_space                   = ["10.101.0.0/22", ]
             location                        = "uksouth"
@@ -389,3 +389,78 @@ variable "configure_mgmt_networking_resources" {
   }
 }
 
+
+variable "vm_names" {
+  type = object({
+    settings = optional(object({
+      vm_configs = optional(list(
+        object({
+          enabled = optional(bool, true)
+          config = object({
+            name            = string
+            image_id        = string
+            resource_group_name  = string
+            vnet_name       = string
+            subnet_name     = string
+            vm_size         = string
+            source_image_reference = optional(list(
+              object({
+                publisher = string
+                offer     = string
+                sku       = string
+                version   = string
+              })
+            ), [])
+          })
+        })
+      ))
+      })
+    )
+  })
+
+  default = {
+    settings = {
+      vm_configs = [
+        { enabled = true
+          config = {
+            name            = "test-vm"
+            image_id        = "1.0.0"
+            resource_group_name  = "hub"
+            vnet_name       = "hub-1"
+            subnet_name     = "rsf-subnet"
+            vm_size         = "Standard_DS2_v2"
+            source_image_reference = [
+              {
+                publisher = "Canonical"
+                offer     = "UbuntuServer"
+                sku       = "18.04-LTS"
+                version   = "1.0.0"
+              }
+            ]
+          }
+          
+        },
+        { enabled = true
+          config = {
+            name            = "test-vm-2"
+            image_id        = "1.0.0"
+            resource_group_name  = "hub"
+            vnet_name       = "hub-1"
+            subnet_name     = "rsf-subnet"
+            vm_size         = "Standard_DS2_v2"
+            source_image_reference = [
+              {
+                publisher = "Redhat"
+                offer     = "RHEL 8"
+                sku       = "20.04-LTS"
+                version   = "2.0.0"
+              }
+            ]
+          }
+          
+        }
+      ]
+      
+    }
+  }
+}

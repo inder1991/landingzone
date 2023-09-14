@@ -301,13 +301,13 @@ resource "azurerm_virtual_network_peering" "peer_identity_to_hub" {
   allow_forwarded_traffic      = true
   allow_gateway_transit        = true
 
-# dependencies
-  depends_on = [
-    azurerm_resource_group.identity-rg,
-    azurerm_virtual_network.connectivity,
-    azurerm_virtual_network.identity,
-  ]
-}
+  # dependencies
+    depends_on = [
+      azurerm_resource_group.identity-rg,
+      azurerm_virtual_network.connectivity,
+      azurerm_virtual_network.identity,
+    ]
+  }
 
 resource "azurerm_virtual_network_peering" "peer_mgmt_to_hub" {
   for_each = local.azurerm_virtual_network_mgmt
@@ -322,52 +322,52 @@ resource "azurerm_virtual_network_peering" "peer_mgmt_to_hub" {
   allow_forwarded_traffic      = true
   allow_gateway_transit        = true
 
-# dependencies
-  depends_on = [
-    azurerm_resource_group.management-rg,
-    azurerm_virtual_network.connectivity,
-    azurerm_virtual_network.mgmt,
-  ]
+  # dependencies
+    depends_on = [
+      azurerm_resource_group.management-rg,
+      azurerm_virtual_network.connectivity,
+      azurerm_virtual_network.mgmt,
+    ]
 }
 
-resource "azurerm_virtual_network_peering" "peer_identity_to_hub2" {
-  for_each = local.azurerm_virtual_network_identity
+# resource "azurerm_virtual_network_peering" "peer_identity_to_hub2" {
+#   for_each = local.azurerm_virtual_network_identity
 
-  provider = azurerm.identity
+#   provider = azurerm.identity
 
-  name                         = "peer-identity-to-hub2"
-  resource_group_name          = each.value.resource_group_name
-  virtual_network_name         = each.value.name
-  remote_virtual_network_id    = azurerm_virtual_network.connectivity["hub-2"].id
-  allow_virtual_network_access = true
-  allow_forwarded_traffic      = true
-  allow_gateway_transit        = true
+#   name                         = "peer-identity-to-hub2"
+#   resource_group_name          = each.value.resource_group_name
+#   virtual_network_name         = each.value.name
+#   remote_virtual_network_id    = azurerm_virtual_network.connectivity["hub-2"].id
+#   allow_virtual_network_access = true
+#   allow_forwarded_traffic      = true
+#   allow_gateway_transit        = true
 
-# dependencies
-  depends_on = [
-    azurerm_resource_group.identity-rg,
-    azurerm_virtual_network.connectivity,
-    azurerm_virtual_network.identity,
-  ]
-}
+# # dependencies
+#   depends_on = [
+#     azurerm_resource_group.identity-rg,
+#     azurerm_virtual_network.connectivity,
+#     azurerm_virtual_network.identity,
+#   ]
+# }
 
-resource "azurerm_virtual_network_peering" "peer_mgmt_to_hub2" {
-  for_each = local.azurerm_virtual_network_mgmt
+# resource "azurerm_virtual_network_peering" "peer_mgmt_to_hub2" {
+#   for_each = local.azurerm_virtual_network_mgmt
 
-  provider = azurerm.management
+#   provider = azurerm.management
 
-  name                         = "peer-mgmt-to-hub2"
-  resource_group_name          = each.value.resource_group_name
-  virtual_network_name         = each.value.name
-  remote_virtual_network_id    = azurerm_virtual_network.connectivity["hub-2"].id
-  allow_virtual_network_access = true
-  allow_forwarded_traffic      = true
-  allow_gateway_transit        = true
+#   name                         = "peer-mgmt-to-hub2"
+#   resource_group_name          = each.value.resource_group_name
+#   virtual_network_name         = each.value.name
+#   remote_virtual_network_id    = azurerm_virtual_network.connectivity["hub-2"].id
+#   allow_virtual_network_access = true
+#   allow_forwarded_traffic      = true
+#   allow_gateway_transit        = true
 
-# dependencies
-  depends_on = [
-    azurerm_resource_group.management-rg,
-    azurerm_virtual_network.connectivity,
-    azurerm_virtual_network.mgmt,
-  ]
-}
+# # dependencies
+#   depends_on = [
+#     azurerm_resource_group.management-rg,
+#     azurerm_virtual_network.connectivity,
+#     azurerm_virtual_network.mgmt,
+#   ]
+# }
