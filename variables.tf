@@ -53,6 +53,13 @@ variable "location" {
 
 }
 
+variable "rg_hub" {
+  type        = string
+  description = "Sets the default location used for resource group deployments where needed."
+  default     = "hub"
+
+}
+
 variable "resource_group_names_by_scope" {
   type        = any
   description = "If specified, allows full customization of common settings for all resources (by type) deployed by this module."
@@ -463,4 +470,23 @@ variable "vm_names" {
       
     }
   }
+}
+
+variable "network_interfaces" {
+  description = "List of network interface objects"
+  type        = list(object({
+    name            = string
+    subnet_id       = string
+  }))
+  default = [
+    {
+    name            = "nic-1"
+    subnet_id       = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myrg/providers/Microsoft.Network/virtualNetworks/myvnet/subnets/mysubnet"
+    # Add other attributes
+  },
+  {
+    name            = "nic-2"
+    subnet_id       = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myrg/providers/Microsoft.Network/virtualNetworks/myvnet/subnets/mysubnet1"
+  }
+  ]
 }
