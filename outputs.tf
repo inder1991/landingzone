@@ -41,17 +41,6 @@ output "subnet_ids_mgmt" {
   }
 }
 
-# output "keyvault_id" {
-#   description = "The ID of the Azure Key Vault"
-#   value       = azurerm_key_vault.router[each.key].id
-# }
-
-# output "keyvault_uri" {
-#   description = "The URI of the Azure Key Vault"
-#   value       = azurerm_key_vault.router[each.key].vault_uri
-# }
-
-# output "key_encryption_key_url" {
-#   description = "The KeyEncryptionKeyURL for each virtual machine's disk encryption settings"
-#   value       = [for vm_key in azurerm_key_vault_key.router : vm_key.id]
-# }
+output "lb_dns" {
+  value = azurerm_lb.example.dns_name_label
+}

@@ -428,7 +428,7 @@ variable "vm_names" {
   default = {
     settings = {
       vm_configs = [
-        { enabled = true
+        { enabled = false
           config = {
             name            = "test-vm"
             image_id        = "1.0.0"
@@ -447,7 +447,7 @@ variable "vm_names" {
           }
           
         },
-        { enabled = true
+        { enabled = false
           config = {
             name            = "test-vm-2"
             image_id        = "1.0.0"
@@ -490,3 +490,5 @@ variable "network_interfaces" {
   }
   ]
 }
+
+
